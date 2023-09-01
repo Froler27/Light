@@ -1,4 +1,5 @@
 set(TARGET_NAME renderer)
+set(RENDERER_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 
 # ---- Add source files ----
 
@@ -25,6 +26,6 @@ target_link_libraries(${TARGET_NAME} PUBLIC glfw)
 
 target_include_directories(
   ${TARGET_NAME} 
-  PUBLIC $<BUILD_INTERFACE:${RENDERER_ROOT_DIR}/source>
+  PUBLIC $<BUILD_INTERFACE:${RENDERER_ROOT_DIR}>
   $<INSTALL_INTERFACE:include/${TARGET_NAME}-${PROJECT_VERSION}>
 )
