@@ -1,0 +1,1 @@
+.\build\test\sdf\Release\sdf.exe

@@ -20,6 +20,8 @@ namespace Light
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+        m_width = create_info.width;
+        m_height = create_info.height;
         m_window = glfwCreateWindow(create_info.width, create_info.height, create_info.title, NULL, NULL);
         if (m_window == NULL)
         {
@@ -60,6 +62,13 @@ namespace Light
     GLFWwindow* WindowSystem::getWindow() const { return m_window; }
 
     std::array<int, 2> WindowSystem::getWindowSize() const { return std::array<int, 2>({m_width, m_height}); }
+
+    float WindowSystem::getTime() const { return glfwGetTime(); }
+
+    void* WindowSystem::getLoadProcFun() const
+    {
+        return (void*)glfwGetProcAddress;
+    }
 
     void WindowSystem::setFocusMode(bool mode)
     {
