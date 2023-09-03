@@ -95,7 +95,11 @@ namespace Light {
         void setFloat2(const std::string& name, float* value) const
         {
             glUniform2fv(glGetUniformLocation(ID, name.c_str()), 1, value);
-            //glUniform2f(glGetUniformLocation(ID, name.c_str()), value[0], value[1]);
+        }
+
+        void setFloat2(const std::string& name, float value0, float value1) const
+        {
+            glUniform2f(glGetUniformLocation(ID, name.c_str()), value0, value1);
         }
 
     private:
