@@ -1,9 +1,9 @@
 
 #pragma  once
 
-#include <glad/glad.h>
 #include <string>
-#include <memory>
+
+#include <renderer.h>
 
 namespace Light
 {
@@ -11,17 +11,22 @@ namespace Light
     class Shader;
     class WindowSystem;
 
-    class SdfRenderer
+    class SdfRenderer: public Renderer
     {
+        static const float s_fps_alpha;
     public:
         explicit SdfRenderer(std::shared_ptr<WindowSystem> windowSystem);
         void setSdfShader(const char* shader);
         void setSdfShader(const std::string& shader);
-        void run();
 
-    private:
+    protected:
+        void initialize() override;
+        void clear() override {}
+        void logicalTick(float delta_time) override;
+        void rendererTick(float delta_time) override;
+
+    protected:
         std::unique_ptr<Shader> m_shader;
-        std::shared_ptr<WindowSystem> m_windowSystem;
     };
 
 }
