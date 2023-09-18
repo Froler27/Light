@@ -30,7 +30,10 @@ namespace Light
 
     protected:
         std::unique_ptr<Shader> m_shader;
+        std::unique_ptr<Shader> m_shaderPostprocessing;
+        std::unique_ptr<Shader> m_shaderModel;
         std::map<std::string, TextureData> m_textures;
+        FrameBuffer m_framebuffer;
     };
 
 }
