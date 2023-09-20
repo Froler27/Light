@@ -32,8 +32,11 @@ namespace Light
         std::unique_ptr<Shader> m_shader;
         std::unique_ptr<Shader> m_shaderPostprocessing;
         std::unique_ptr<Shader> m_shaderModel;
+        std::unique_ptr<Shader> m_shaderGaussian;
         std::map<std::string, TextureData> m_textures;
         FrameBuffer m_framebuffer;
+        uint32_t m_pingpangFrameBuffers[2];
+        uint32_t m_pingpangTextures[2];
     };
 
 }

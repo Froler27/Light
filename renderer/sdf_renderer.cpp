@@ -59,9 +59,13 @@ namespace Light
         stbi_set_flip_vertically_on_load(true);
         int width, height, nrChannels;
         unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
+        auto srcFormat = GL_RGBA;
+        if (nrChannels < 4) {
+            srcFormat = GL_RGB;
+        }
         if (data)
         {
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, srcFormat, GL_UNSIGNED_BYTE, data);
             glGenerateMipmap(GL_TEXTURE_2D);
         }
         else
@@ -116,7 +120,7 @@ namespace Light
         // create a color attachment texture
         glGenTextures(1, &m_framebuffer.texture_id);
         glBindTexture(GL_TEXTURE_2D, m_framebuffer.texture_id);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_windowSystem->getWindowSize()[0], m_windowSystem->getWindowSize()[1], 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_windowSystem->getWindowSize()[0], m_windowSystem->getWindowSize()[1], 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_framebuffer.texture_id, 0);
@@ -135,21 +139,38 @@ namespace Light
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         //glPointSize(40.f);
 
+        glGenFramebuffers(2, m_pingpangFrameBuffers);
+        glGenTextures(2, m_pingpangTextures);
+        for (size_t i = 0; i < 2; ++i) {
+            glBindFramebuffer(GL_FRAMEBUFFER, m_pingpangFrameBuffers[i]);
+            glBindTexture(GL_TEXTURE_2D, m_pingpangTextures[i]);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_windowSystem->getWindowSize()[0], m_windowSystem->getWindowSize()[1], 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_pingpangTextures[i], 0);
+        }
+
         auto windowSize = m_windowSystem->getWindowSize();
         float resolution[2]{ float(windowSize[0]), float(windowSize[1]) };
         m_shader->use();
         m_shader->setFloat2("iResolution", resolution);
         m_shader->setFloat2("iMouse", resolution);
 
-        auto texture0 = setTexture("../resources/textures/awesomeface.png");
+        auto texture0 = setTexture("../resources/textures/nilu.jpeg");
         m_shader->setInt("iChannel0", 0);
         m_shader->setFloat2("iChannel0Resolution", texture0.m_width, texture0.m_height);
         
 
-        m_shaderPostprocessing = std::make_unique<Shader>("../resources/shaders/postprocessing/postprocessing.vs", "../resources/shaders/postprocessing/postprocessing.vs");
+        m_shaderPostprocessing = std::make_unique<Shader>("../resources/shaders/postprocessing/postprocessing.vs", "../resources/shaders/postprocessing/postprocessing.fs");
         m_shaderPostprocessing->use();
 
-        m_shaderModel = std::make_unique<Shader>("../resources/shaders/postprocessing/postprocessing.vs", "../resources/shaders/postprocessing/postprocessing.vs");
+        m_shaderGaussian = std::make_unique<Shader>("../resources/shaders/postprocessing/screen.vs", "../resources/shaders/postprocessing/gaussian_blur.fs");
+        m_shaderGaussian->use();
+        m_shaderGaussian->setInt("image", 0);
+
+        m_shaderModel = std::make_unique<Shader>("../resources/shaders/postprocessing/postprocessing.vs", "../resources/shaders/postprocessing/postprocessing.fs");
         m_shaderModel->use();
     }
 
@@ -169,16 +190,38 @@ namespace Light
         m_shader->setFloat("iTime", m_windowSystem->getTime());
         m_shader->setInt("iFrame", m_frame_count);
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, setTexture("../resources/textures/awesomeface.png").m_id);
+        glBindTexture(GL_TEXTURE_2D, setTexture("../resources/textures/nilu.jpeg").m_id);
 
         glDrawArrays(GL_TRIANGLES, 0, 3);
+
+        size_t curFb = m_pingpangFrameBuffers[0];
+        size_t curTx = m_framebuffer.texture_id;
+        for (size_t i = 0; i < 1; ++i) {
+            glBindFramebuffer(GL_FRAMEBUFFER, curFb);
+            glClear(GL_COLOR_BUFFER_BIT);
+            glBindTexture(GL_TEXTURE_2D, curTx);
+            m_shaderGaussian->use();
+            m_shaderGaussian->setBool("horizontal", true);
+            glDrawArrays(GL_TRIANGLES, 0, 3);
+
+            glBindFramebuffer(GL_FRAMEBUFFER, m_pingpangFrameBuffers[1]);
+            glClear(GL_COLOR_BUFFER_BIT);
+            glBindTexture(GL_TEXTURE_2D, m_pingpangTextures[0]);
+            m_shaderGaussian->use();
+            m_shaderGaussian->setBool("horizontal", false);
+            glDrawArrays(GL_TRIANGLES, 0, 3);
+
+            curFb = m_pingpangFrameBuffers[0];
+            curTx = m_pingpangTextures[1];
+        }
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glDisable(GL_DEPTH_TEST);
         glClear(GL_COLOR_BUFFER_BIT);
 
+        
         m_shaderPostprocessing->use();
-        glBindTexture(GL_TEXTURE_2D, m_framebuffer.texture_id);
+        glBindTexture(GL_TEXTURE_2D, curTx);
         glDrawArrays(GL_TRIANGLES, 0, 3);
     }
 

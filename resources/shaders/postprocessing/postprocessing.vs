@@ -1,4 +1,4 @@
-#version 330 core
+#version 410 core
 
 const vec4 vertices[3] = vec4[3] (
     vec4(-1., 3., 0, 1.),
