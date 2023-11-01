@@ -1,7 +1,7 @@
 
 #pragma  once
 
-#include "log_system.h"
+#include "core/log/log_system.h"
 
 #include <spdlog/async.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -10,8 +10,6 @@
 
 namespace Light
 {
-    LogSystem g_log_system;
-
     LogSystem::LogSystem()
     {
         auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();

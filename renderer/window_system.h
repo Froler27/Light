@@ -28,6 +28,7 @@ namespace Light
         void               setTitle(const char* title);
         GLFWwindow*        getWindow() const;
         std::array<int, 2> getWindowSize() const;
+        float              getAspect() const;
         void*              getLoadProcFun() const;
         float getTime() const;
         

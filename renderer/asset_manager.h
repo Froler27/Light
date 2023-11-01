@@ -8,7 +8,7 @@
 #include <string>
 #include <iostream>
 
-#include "render_type.h"
+#include "render/render_type.h"
 
 namespace Light
 {
@@ -16,6 +16,6 @@ namespace Light
     {
     public:
         std::filesystem::path getFullPath(const std::string& relative_path) const;
-        static StaticMeshData loadStaticMesh(std::string filename);
+        //static StaticMeshData loadStaticMesh(std::string filename);
     };
 }

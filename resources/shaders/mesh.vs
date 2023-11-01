@@ -1,4 +1,4 @@
-#version 330 core
+#version 310 es
 
 layout(location = 0) in vec3 in_position; // for some types as dvec3 takes 2 locations
 layout(location = 1) in vec3 in_normal;
@@ -15,7 +15,15 @@ uniform mat4 proj_view_matrix;
 
 void main()
 {
-    out_world_position = (model_matrix * vec4(in_position, 1.0)).xyz;
+    highp vec3 model_position;
+    highp vec3 model_normal;
+    highp vec3 model_tangent;
+
+    model_position = in_position;
+    model_normal   = in_normal;
+    model_tangent  = in_tangent;
+
+    out_world_position = (model_matrix * vec4(model_position, 1.0)).xyz;
     gl_Position = proj_view_matrix * vec4(out_world_position, 1.0);
 
     // TODO: normal matrix

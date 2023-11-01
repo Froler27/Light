@@ -63,6 +63,11 @@ namespace Light
 
     std::array<int, 2> WindowSystem::getWindowSize() const { return std::array<int, 2>({m_width, m_height}); }
 
+    float WindowSystem::getAspect() const
+    {
+        return float(m_width) / float (m_height);
+    }
+
     float WindowSystem::getTime() const { return glfwGetTime(); }
 
     void* WindowSystem::getLoadProcFun() const

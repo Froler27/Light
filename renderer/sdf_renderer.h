@@ -5,7 +5,7 @@
 #include <map>
 
 #include <renderer.h>
-#include <render_type.h>
+#include <render/render_type.h>
 
 namespace Light
 {
@@ -37,6 +37,8 @@ namespace Light
         FrameBuffer m_framebuffer;
         uint32_t m_pingpangFrameBuffers[2];
         uint32_t m_pingpangTextures[2];
+        uint32_t m_modelVAO;
+        uint32_t m_modelIndexSize{ 0 };
     };
 
 }

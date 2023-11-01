@@ -18,6 +18,7 @@ namespace Light
         Vector3(float x_, float y_, float z_) : x {x_}, y {y_}, z {z_} {}
 
         explicit Vector3(const float coords[3]) : x {coords[0]}, y {coords[1]}, z {coords[2]} {}
+        explicit Vector3(float value) : x{ value }, y{ value }, z{ value } {}
 
         float operator[](size_t i) const
         {

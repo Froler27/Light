@@ -7,6 +7,8 @@
 #include <sstream>
 #include <iostream>
 
+#include "core/math/math_headers.h"
+
 namespace Light {
 
     class Shader
@@ -100,6 +102,17 @@ namespace Light {
         void setFloat2(const std::string& name, float value0, float value1) const
         {
             glUniform2f(glGetUniformLocation(ID, name.c_str()), value0, value1);
+        }
+
+        // ------------------------------------------------------------------------
+        void setMat3(const std::string& name, const Matrix3x3& mat) const
+        {
+            glUniformMatrix3fv(glGetUniformLocation(ID, name.c_str()), 1, GL_TRUE, reinterpret_cast<const float*>(mat.m_mat));
+        }
+        // ------------------------------------------------------------------------
+        void setMat4(const std::string& name, const Matrix4x4& mat) const
+        {
+            glUniformMatrix4fv(glGetUniformLocation(ID, name.c_str()), 1, GL_TRUE, reinterpret_cast<const float*>(mat.m_mat));
         }
 
     private:

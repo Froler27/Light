@@ -5,8 +5,8 @@
 #include <array>
 
 #include <glad/glad.h>
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
+// #define STB_IMAGE_IMPLEMENTATION
+// #include <stb_image.h>
 
 #include "window_system.h"
 #include "shader.h"
@@ -56,31 +56,31 @@ namespace Light
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-        stbi_set_flip_vertically_on_load(true);
-        int width, height, nrChannels;
-        unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
-        auto srcFormat = GL_RGBA;
-        if (nrChannels < 4) {
-            srcFormat = GL_RGB;
-        }
-        if (data)
-        {
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, srcFormat, GL_UNSIGNED_BYTE, data);
-            glGenerateMipmap(GL_TEXTURE_2D);
-        }
-        else
-        {
-            std::cout << "Failed to load texture" << std::endl;
-        }
-        stbi_image_free(data);
+        //stbi_set_flip_vertically_on_load(true);
+//         int width, height, nrChannels;
+//         unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
+         auto srcFormat = GL_RGBA;
+//         if (nrChannels < 4) {
+//             srcFormat = GL_RGB;
+//         }
+//         if (data)
+//         {
+//             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, srcFormat, GL_UNSIGNED_BYTE, data);
+//             glGenerateMipmap(GL_TEXTURE_2D);
+//         }
+//         else
+//         {
+//             std::cout << "Failed to load texture" << std::endl;
+//         }
+//         stbi_image_free(data);
 
 
         auto res = m_textures.emplace(path, TextureData{});
         TextureData& textureData = res.first->second;
         textureData.m_id = texture;
-        textureData.m_width = width;
-        textureData.m_height = height;
-        textureData.m_channelCount = nrChannels;
+//         textureData.m_width = width;
+//         textureData.m_height = height;
+//         textureData.m_channelCount = nrChannels;
         textureData.m_pixels = nullptr;
 
         return textureData;
@@ -88,31 +88,10 @@ namespace Light
 
     void SdfRenderer::initialize()
     {
-        unsigned int VBO, VAO, EBO;
-        glGenVertexArrays(1, &VAO);
+        uint32_t VBO, EBO;
+        glGenVertexArrays(1, &m_modelVAO);
         glGenBuffers(1, &VBO);
         glGenBuffers(1, &EBO);
-
-        auto mesh = AssetManager::loadStaticMesh("../resources/models/sphere.obj");
-
-        glBindVertexArray(VAO);
-
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, mesh.m_vertex_buffer->m_size, mesh.m_vertex_buffer->m_data, GL_STATIC_DRAW);
-
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.m_index_buffer->m_size, mesh.m_index_buffer->m_data, GL_STATIC_DRAW);
-
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(MeshVertexDataDefinition), (void*)0);
-        glEnableVertexAttribArray(0);
-        // color attribute
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(MeshVertexDataDefinition), (void*)(3 * sizeof(float)));
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(MeshVertexDataDefinition), (void*)(6 * sizeof(float)));
-        glEnableVertexAttribArray(2);
-        // texture coord attribute
-        glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(MeshVertexDataDefinition), (void*)(9 * sizeof(float)));
-        glEnableVertexAttribArray(3);
         
 
         glGenFramebuffers(1, &m_framebuffer.fb_id);
@@ -151,6 +130,7 @@ namespace Light
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_pingpangTextures[i], 0);
         }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         auto windowSize = m_windowSystem->getWindowSize();
         float resolution[2]{ float(windowSize[0]), float(windowSize[1]) };
@@ -170,7 +150,7 @@ namespace Light
         m_shaderGaussian->use();
         m_shaderGaussian->setInt("image", 0);
 
-        m_shaderModel = std::make_unique<Shader>("../resources/shaders/postprocessing/postprocessing.vs", "../resources/shaders/postprocessing/postprocessing.fs");
+        m_shaderModel = std::make_unique<Shader>("../resources/shaders/mesh.vs", "../resources/shaders/mesh.fs");
         m_shaderModel->use();
     }
 
@@ -185,41 +165,51 @@ namespace Light
         glEnable(GL_DEPTH_TEST);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        
-        m_shader->use();
-        m_shader->setFloat("iTime", m_windowSystem->getTime());
-        m_shader->setInt("iFrame", m_frame_count);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, setTexture("../resources/textures/nilu.jpeg").m_id);
+        m_shaderModel->use();
+        m_shaderModel->setMat4("model_matrix", Matrix4x4::getTrans(Vector3(0, 0, 0)));
+        //Matrix4x4 viewMat = Matrix4x4::getTrans(Vector3(0, -10, 0));
+        Matrix4x4 viewMat = Math::makeLookAtMatrix(Vector3(0, -5, 0), Vector3(0, 0, 0), Vector3::UNIT_Z);
+        Matrix4x4 projMat = Math::makePerspectiveMatrix(Radian(Degree(120)),
+            m_windowSystem->getWindowSize()[0]/ m_windowSystem->getWindowSize()[1], 1, 1000);
+        m_shaderModel->setMat4("proj_view_matrix", projMat*viewMat);
+        glBindVertexArray(m_modelVAO);
+        glDrawElements(GL_TRIANGLES, m_modelIndexSize, GL_UNSIGNED_SHORT, 0);
+        //glBindVertexArray(0);
 
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+//         m_shader->use();
+//         m_shader->setFloat("iTime", m_windowSystem->getTime());
+//         m_shader->setInt("iFrame", m_frame_count);
+//         glActiveTexture(GL_TEXTURE0);
+//         glBindTexture(GL_TEXTURE_2D, setTexture("../resources/textures/nilu.jpeg").m_id);
+// 
+//         glDrawArrays(GL_TRIANGLES, 0, 3);
 
         size_t curFb = m_pingpangFrameBuffers[0];
         size_t curTx = m_framebuffer.texture_id;
-        for (size_t i = 0; i < 1; ++i) {
-            glBindFramebuffer(GL_FRAMEBUFFER, curFb);
-            glClear(GL_COLOR_BUFFER_BIT);
-            glBindTexture(GL_TEXTURE_2D, curTx);
-            m_shaderGaussian->use();
-            m_shaderGaussian->setBool("horizontal", true);
-            glDrawArrays(GL_TRIANGLES, 0, 3);
-
-            glBindFramebuffer(GL_FRAMEBUFFER, m_pingpangFrameBuffers[1]);
-            glClear(GL_COLOR_BUFFER_BIT);
-            glBindTexture(GL_TEXTURE_2D, m_pingpangTextures[0]);
-            m_shaderGaussian->use();
-            m_shaderGaussian->setBool("horizontal", false);
-            glDrawArrays(GL_TRIANGLES, 0, 3);
-
-            curFb = m_pingpangFrameBuffers[0];
-            curTx = m_pingpangTextures[1];
-        }
+//         for (size_t i = 0; i < 0; ++i) {
+//             glBindFramebuffer(GL_FRAMEBUFFER, curFb);
+//             glClear(GL_COLOR_BUFFER_BIT);
+//             glBindTexture(GL_TEXTURE_2D, curTx);
+//             m_shaderGaussian->use();
+//             m_shaderGaussian->setBool("horizontal", true);
+//             glDrawArrays(GL_TRIANGLES, 0, 3);
+// 
+//             glBindFramebuffer(GL_FRAMEBUFFER, m_pingpangFrameBuffers[1]);
+//             glClear(GL_COLOR_BUFFER_BIT);
+//             glBindTexture(GL_TEXTURE_2D, m_pingpangTextures[0]);
+//             m_shaderGaussian->use();
+//             m_shaderGaussian->setBool("horizontal", false);
+//             glDrawArrays(GL_TRIANGLES, 0, 3);
+// 
+//             curFb = m_pingpangFrameBuffers[0];
+//             curTx = m_pingpangTextures[1];
+//         }
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glDisable(GL_DEPTH_TEST);
         glClear(GL_COLOR_BUFFER_BIT);
-
-        
+// 
+//         
         m_shaderPostprocessing->use();
         glBindTexture(GL_TEXTURE_2D, curTx);
         glDrawArrays(GL_TRIANGLES, 0, 3);
