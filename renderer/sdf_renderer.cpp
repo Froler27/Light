@@ -77,7 +77,7 @@ namespace Light
 
         auto res = m_textures.emplace(path, TextureData{});
         TextureData& textureData = res.first->second;
-        textureData.m_id = texture;
+        //textureData.m_id = texture;
 //         textureData.m_width = width;
 //         textureData.m_height = height;
 //         textureData.m_channelCount = nrChannels;

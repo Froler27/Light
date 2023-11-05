@@ -13,6 +13,7 @@ namespace Light
 
     public:
         Vector4() = default;
+        explicit Vector4(float v) :x{ v }, y{ v }, z{ v }, w{ v }{}
         Vector4(float x_, float y_, float z_, float w_) : x {x_}, y {y_}, z {z_}, w {w_} {}
         Vector4(const Vector3& v3, float w_) : x {v3.x}, y {v3.y}, z {v3.z}, w {w_} {}
 

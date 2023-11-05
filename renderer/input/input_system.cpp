@@ -43,6 +43,12 @@ namespace Light
             case GLFW_KEY_D:
                 m_game_command |= (unsigned int)GameCommand::right;
                 break;
+            case GLFW_KEY_E:
+                m_game_command |= (unsigned int)GameCommand::up;
+                break;
+            case GLFW_KEY_Q:
+                m_game_command |= (unsigned int)GameCommand::down;
+                break;
             case GLFW_KEY_SPACE:
                 m_game_command |= (unsigned int)GameCommand::jump;
                 break;
@@ -84,6 +90,12 @@ namespace Light
                 break;
             case GLFW_KEY_D:
                 m_game_command &= (k_complement_control_command ^ (unsigned int)GameCommand::right);
+                break;
+            case GLFW_KEY_E:
+                m_game_command &= (k_complement_control_command ^ (unsigned int)GameCommand::up);
+                break;
+            case GLFW_KEY_Q:
+                m_game_command &= (k_complement_control_command ^ (unsigned int)GameCommand::down);
                 break;
             case GLFW_KEY_LEFT_CONTROL:
                 m_game_command &= (k_complement_control_command ^ (unsigned int)GameCommand::squat);

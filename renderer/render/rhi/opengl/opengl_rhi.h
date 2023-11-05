@@ -30,7 +30,27 @@ namespace Light
         uint32_t ibo{ 0 };
     };
 
-    struct OpenglBuffer {};
+    struct OpenglBuffer {
+        uint32_t ubo{ 0 };
+    };
+
+    struct SteadyUniformBlock {
+        Vector4 light_color{1.f, 1.f, 1.f, 1.f};
+        float light_pos_or_dir[4]{0.f, 0.f, -1.f, 0.f};
+        float ambient_color[3]{ 1.f, 1.f, 1.f };
+        float ambient_intensity{ 0.1f };
+        float camera_position[3]{};
+        float _padding_camera_position{};
+        Matrix4x4_ view_matrix;
+        Matrix4x4_ proj_matrix;
+        Matrix4x4_ proj_view_matrix;
+    };
+
+    struct TransientUniformBlock
+    {
+        Vector4 color;
+        Vector4 ks_p;
+    };
 
     class OpenglRHI final : public RHI
     {
@@ -56,6 +76,7 @@ namespace Light
     private:
         static void windowSizeCallback(int width, int height);
 
+        void initSteadyUniform();
         void upateTexture(const std::shared_ptr<TextureData> texture, OpenglTexture& glTexture);
         void compileShader(const RenderShaderData& shaderData, uint32_t& shader);
 
@@ -65,7 +86,9 @@ namespace Light
         std::unordered_map<size_t, OpenglMaterial> m_materials;
         OpenglInstance m_ibo{ 0 };
 
-        uint32_t m_current_shader{ 0 };
-        Matrix4x4 m_proj_view_matrix;
+        std::shared_ptr<BufferData> m_steady_uniform_buffer;
+        std::shared_ptr<BufferData> m_transient_uniform_buffer_block;
+        OpenglBuffer m_steady_uniform_buffer_gpu;
+        OpenglBuffer m_transient_uniform_buffer_block_gpu;
     };
 }

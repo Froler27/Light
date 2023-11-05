@@ -18,6 +18,7 @@ namespace Light
     class RenderResourceBase
     {
     public:
+        RenderResourceBase();
         virtual ~RenderResourceBase() {}
 
         void initScene(std::shared_ptr<RHI> rhi);

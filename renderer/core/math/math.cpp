@@ -116,16 +116,17 @@ namespace Light
     {
         const Vector3& up = up_dir.normalisedCopy();
 
+        // f 为-z方向，r为x方向，u为y方向
         Vector3 f = (target_position - eye_position).normalisedCopy();
-        Vector3 s = f.crossProduct(up).normalisedCopy();
-        Vector3 u = s.crossProduct(f);
+        Vector3 r = f.crossProduct(up).normalisedCopy();
+        Vector3 u = r.crossProduct(f);
 
         Matrix4x4 view_mat = Matrix4x4::IDENTITY;
 
-        view_mat[0][0] = s.x;
-        view_mat[0][1] = s.y;
-        view_mat[0][2] = s.z;
-        view_mat[0][3] = -s.dotProduct(eye_position);
+        view_mat[0][0] = r.x;
+        view_mat[0][1] = r.y;
+        view_mat[0][2] = r.z;
+        view_mat[0][3] = -r.dotProduct(eye_position);
         view_mat[1][0] = u.x;
         view_mat[1][1] = u.y;
         view_mat[1][2] = u.z;
@@ -144,7 +145,7 @@ namespace Light
         Matrix4x4 ret = Matrix4x4::ZERO;
         ret[0][0]     = 1.f / (aspect * tan_half_fovy);
         ret[1][1]     = 1.f / tan_half_fovy;
-        ret[2][2]     = zfar / (znear - zfar);
+        ret[2][2]     = (zfar + znear) / (znear - zfar);
         ret[3][2]     = -1.f;
         ret[2][3]     = -(zfar * znear) / (zfar - znear);
 

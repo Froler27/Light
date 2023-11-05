@@ -313,15 +313,24 @@ namespace Light
             if (m_data)
             {
                 free(m_data);
+                m_data = nullptr;
             }
         }
         bool isValid() const { return m_data != nullptr; }
+
+        bool copyData(void* data) {
+            if (!isValid() || !data) {
+                return false;
+            }
+            memcpy(m_data, data, m_size);
+            return true;
+        }
     };
 
     class TextureData
     {
     public:
-        uint32_t m_id{ 0 };
+        //uint32_t m_id{ 0 };
         uint32_t m_width{ 0 };
         uint32_t m_height{ 0 };
         uint32_t m_channelCount{ 0 };
@@ -329,11 +338,15 @@ namespace Light
 
         RHIFormat m_format = RHI_FORMAT_MAX_ENUM;
         TextureData() = default;
+        explicit TextureData(size_t size) {
+            m_pixels = malloc(size);
+        }
         ~TextureData()
         {
             if (m_pixels)
             {
                 free(m_pixels);
+                m_pixels = nullptr;
             }
         }
         bool isValid() const { return m_pixels != nullptr; }
@@ -364,7 +377,7 @@ namespace Light
     {
         std::string m_vertex_shader_file = "../resources/shaders/mesh.vs";
         std::string m_fragment_shader_file = "../resources/shaders/mesh.fs";
-        std::string m_base_color_file = "../resources/textures/nilu.jpeg";
+        std::string m_base_color_file = "../resources/textures/awesomeface.png";
         std::string m_metallic_roughness_file;
         std::string m_normal_file;
         std::string m_occlusion_file;

@@ -1,4 +1,4 @@
-#version 310 es
+#version 410 core
 
 // read in fragnormal (from vertex shader)
 layout(location = 0) in highp vec3 in_world_position;
@@ -7,6 +7,8 @@ layout(location = 2) in highp vec3 in_tangent;
 layout(location = 3) in highp vec2 in_texcoord;
 
 layout(location = 0) out highp vec4 out_scene_color;
+
+uniform mat4 proj_view_matrix;
 
 const highp vec3 LIGHT_POS = vec3(3., 0., 5);
 const highp vec3 LIGHT_DIR = -vec3(3., 0., 5);
@@ -28,11 +30,11 @@ void main()
 {
     highp vec3 result_color = vec3(1., 1., 1.);
 
-    highp float ambientStrenth = 0.1;
+    highp float ambientStrenth = 0.2;
     highp vec3 ambient = ambientStrenth * LIGHT_COLOR;
 
     highp vec3 norm = normalize(in_normal);
-    highp vec3 lightDir = normalize(-LIGHT_DIR);
+    highp vec3 lightDir = -normalize(LIGHT_DIR);
     highp float diff = max(dot(norm, lightDir), 0.0);
     highp vec3 diffuse = diff * LIGHT_COLOR;
 
@@ -44,8 +46,5 @@ void main()
         
     result_color = (ambient + diffuse + specular) * result_color;
 
-    //result_color = vec3(1., 0., 0.);
-
-    
     out_scene_color = vec4(result_color, 1.0);
 }

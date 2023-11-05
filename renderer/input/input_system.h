@@ -16,6 +16,8 @@ namespace Light
         sprint   = 1 << 6,                 // LEFT SHIFT
         fire     = 1 << 7,                 // not implemented yet
         free_carema = 1 << 8,              // F
+        up = 1 << 9, // E
+        down = 1 << 10, // Q
         invalid  = (unsigned int)(1 << 31) // lost focus
     };
 

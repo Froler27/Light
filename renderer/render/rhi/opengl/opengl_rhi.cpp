@@ -17,10 +17,33 @@ namespace Light
             LOG_ERROR("Failed to initialize OpenglRHI");
         }
         m_window_system->registerOnWindowSizeFunc(windowSizeCallback);
+        m_steady_uniform_buffer = std::make_shared<BufferData>(sizeof(SteadyUniformBlock));
+        {
+            SteadyUniformBlock* steadyBlock = (SteadyUniformBlock*)(m_steady_uniform_buffer->m_data);
+            steadyBlock->light_color = Vector4(Vector3(Math_PI), 0);
+            *(Vector4*)(steadyBlock->light_pos_or_dir) = -Vector4(-50, 10, 100, 0);
+        }
+        m_transient_uniform_buffer_block = std::make_shared<BufferData>(sizeof(TransientUniformBlock));
+
+        glGenBuffers(1, &m_steady_uniform_buffer_gpu.ubo);
+        glGenBuffers(1, &m_transient_uniform_buffer_block_gpu.ubo);
+
+        TransientUniformBlock* transientBlock = (TransientUniformBlock*)(m_transient_uniform_buffer_block->m_data);
+        transientBlock->color = Vector4(1.f);
+        transientBlock->ks_p = Vector4(Vector3(1. / Math_PI), 32);
+        glBindBuffer(GL_UNIFORM_BUFFER, m_transient_uniform_buffer_block_gpu.ubo);
+        glBufferData(GL_UNIFORM_BUFFER, m_transient_uniform_buffer_block->m_size,
+            m_transient_uniform_buffer_block->m_data, GL_DYNAMIC_DRAW);
+
 
         glEnable(GL_DEPTH_TEST);
+        //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        //glPolygonMode(GL_BACK, GL_POINT);
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        
+        //glEnable(GL_CULL_FACE);
+        //glCullFace(GL_FRONT);
+        glCullFace(GL_BACK);
+        //glFrontFace(GL_CW);
     }
 
     void OpenglRHI::clear()
@@ -38,16 +61,34 @@ namespace Light
         glViewport(0, 0, width, height);
     }
 
+    void OpenglRHI::bindCamera(std::shared_ptr<RenderCamera> camera)
+    {
+        SteadyUniformBlock* steadyBlock = (SteadyUniformBlock*)(m_steady_uniform_buffer->m_data);
+        auto view_matrix = camera->getViewMatrix();
+        auto proj_matrix = camera->getPersProjMatrix();
+        steadyBlock->view_matrix = view_matrix.toMatrix4x4_();
+        steadyBlock->proj_matrix = proj_matrix.toMatrix4x4_();
+        steadyBlock->proj_view_matrix = (proj_matrix * view_matrix).toMatrix4x4_();
+        *(Vector3*)(steadyBlock->camera_position) = camera->position();
+
+        glBindBuffer(GL_UNIFORM_BUFFER, m_steady_uniform_buffer_gpu.ubo);
+        glBufferData(GL_UNIFORM_BUFFER, m_steady_uniform_buffer->m_size,
+            m_steady_uniform_buffer->m_data, GL_STATIC_DRAW);
+
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    }
+
     void OpenglRHI::bindMaterial(size_t materialId)
     {
         auto it = m_materials.find(materialId);
         if (it != m_materials.end()) {
-            m_current_shader = it->second.shader;
-            glUseProgram(m_current_shader);
-            glBindTexture(GL_TEXTURE_2D, it->second.base_color_texture.texture);
 
-            glUniformMatrix4fv(glGetUniformLocation(m_current_shader, "proj_view_matrix"),
-                1, GL_TRUE, reinterpret_cast<const float*>(m_proj_view_matrix.m_mat));
+
+            glUseProgram(it->second.shader);
+            glBindTexture(GL_TEXTURE_2D, it->second.base_color_texture.texture);
+            glBindBufferBase(GL_UNIFORM_BUFFER, 0, m_steady_uniform_buffer_gpu.ubo);
+            glBindBufferBase(GL_UNIFORM_BUFFER, 1, m_transient_uniform_buffer_block_gpu.ubo);
+            glUniform1i(1, 0); // 缁戝畾绾圭悊
         }
     }
 
@@ -61,9 +102,8 @@ namespace Light
 
     void OpenglRHI::drawMesh(size_t meshId, const Matrix4x4& model_matrix)
     {
-        glUniformMatrix4fv(glGetUniformLocation(m_current_shader, "model_matrix"),
-            1, GL_TRUE, reinterpret_cast<const float*>(model_matrix.m_mat));
-        
+        glUniformMatrix4fv(0, 1, GL_TRUE, reinterpret_cast<const float*>(model_matrix.m_mat));
+
         auto it = m_meshes.find(meshId);
         if (it == m_meshes.end()) {
             return;
@@ -157,11 +197,9 @@ namespace Light
         auto res = m_materials.emplace(materialId, OpenglMaterial{});
         assert(res.second);
         OpenglMaterial& now_material = res.first->second;
-        
-        
+
         compileShader(materailData.m_shader, now_material.shader);
         upateTexture(materailData.m_base_color_texture, now_material.base_color_texture);
-
         return true;
     }
 
@@ -189,14 +227,15 @@ namespace Light
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
         glTexImage2D(GL_TEXTURE_2D,
-            0,                                      // 指定多级渐远纹理的级别
-            GL_RGBA,                                // 把纹理储存为何种格式
+            0,                                     
+            GL_RGBA,                              
             texture->m_height, texture->m_height,
-            0,                                      // 总是被设为0（历史遗留的问题
-            texture->m_format == RHIFormat::RHI_FORMAT_R8G8B8A8_SRGB ?
-            GL_SRGB_ALPHA : GL_RGBA ,               // 源图的格式 GL_SRGB GL_RGBA
-            GL_UNSIGNED_BYTE,                       // 源图的数据格式
-            texture->m_pixels);                     // 图像数据
+            0,                                     
+            //texture->m_format == RHIFormat::RHI_FORMAT_R8G8B8A8_SRGB ?
+           // GL_SRGB_ALPHA : GL_RGBA ,              
+            GL_RGBA,
+            GL_UNSIGNED_BYTE,                     
+            texture->m_pixels);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
 
@@ -226,11 +265,5 @@ namespace Light
         glDeleteShader(fragment);
     }
 
-    void OpenglRHI::bindCamera(std::shared_ptr<RenderCamera> camera)
-    {
-
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        m_proj_view_matrix = camera->getPersProjMatrix() * camera->getViewMatrix();
-    }
 
 }

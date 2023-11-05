@@ -33,6 +33,7 @@ namespace Light
 
     private:
         void initScene();
+        void drawAxis();
         static void windowSizeChanged(int w, int h);
 
         std::shared_ptr<RHI>                m_rhi;

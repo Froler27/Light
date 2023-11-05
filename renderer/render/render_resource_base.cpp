@@ -20,6 +20,32 @@
 
 namespace Light
 {
+    std::shared_ptr<TextureData> GetSingleColorTexture(Vector4 color)
+    {
+        std::shared_ptr<TextureData> texture = std::make_shared<TextureData>(32);
+
+        auto col = (unsigned char*)(texture->m_pixels);
+        col[0] = ((color.x) * 255);
+        col[1] = ((color.y) * 255);
+        col[2] = ((color.z) * 255);
+        col[3] = ((color.w) * 255);
+        texture->m_format = RHI_FORMAT_R8G8B8A8_UNORM;
+        texture->m_channelCount = 4;
+        texture->m_width = 1;
+        texture->m_height = 1;
+        return texture;
+    }
+
+
+    std::unordered_map<std::string, RenderMaterialData> SimpleMaterials{
+        {"phong_silver", {GetSingleColorTexture(Vector4(Vector3(0.50754),1.))}}
+    };
+
+    RenderResourceBase::RenderResourceBase()
+    {
+        stbi_set_flip_vertically_on_load(true);
+    }
+
     void RenderResourceBase::initScene(std::shared_ptr<RHI> rhi)
     {
         AxisAlignedBox aabb;
@@ -75,11 +101,23 @@ namespace Light
         if (!texture->m_pixels)
             return nullptr;
 
+
+
         texture->m_width = iw;
         texture->m_height = ih;
         texture->m_channelCount = n;
         texture->m_format = (is_srgb) ? RHIFormat::RHI_FORMAT_R8G8B8A8_SRGB :
             RHIFormat::RHI_FORMAT_R8G8B8A8_UNORM;
+
+        char* ttt = (char*)texture->m_pixels;
+        bool kkkk = false;
+        int i = 3;
+        for (i = 3; i < texture->m_height * texture->m_width; i += 4) {
+            if (ttt[i] != 0) {
+                kkkk = true;
+                break;
+            }
+        }
 
         return texture;
     }
@@ -103,8 +141,12 @@ namespace Light
 
     RenderMaterialData RenderResourceBase::loadMaterialData(const MaterialSourceDesc& source)
     {
+
+        if (SimpleMaterials.count(source.m_base_color_file) > 0) {
+            return SimpleMaterials.find(source.m_base_color_file)->second;
+        }
         RenderMaterialData ret;
-        ret.m_base_color_texture = loadTexture(source.m_base_color_file, true);
+        ret.m_base_color_texture = loadTexture(source.m_base_color_file);
         ret.m_metallic_roughness_texture = loadTexture(source.m_metallic_roughness_file);
         ret.m_normal_texture = loadTexture(source.m_normal_file);
         ret.m_occlusion_texture = loadTexture(source.m_occlusion_file);

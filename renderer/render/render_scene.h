@@ -16,12 +16,18 @@ namespace Light
     class RenderEntity {
     public:
         explicit RenderEntity(uint32_t id): m_instance_id(id){}
-        RenderEntity(uint32_t id, const Matrix4x4& mat): m_model_matrix(mat) {}
+        RenderEntity(uint32_t id, const Matrix4x4& mat): m_instance_id(id), m_model_matrix(mat) {}
 
         uint32_t  m_instance_id{ 0 };
-        uint32_t m_shader{ 0 };
         Matrix4x4 m_model_matrix{ Matrix4x4::IDENTITY };
     };
+
+    enum class Shape : uint32_t
+    {
+        Sphere,
+        Plane,
+    };
+    extern const std::vector<std::string> ShapeString;
 
     class RenderScene
     {
@@ -30,6 +36,16 @@ namespace Light
         explicit RenderScene(std::shared_ptr<RHI> rhi);
 
         void addMesh(const MeshSourceDesc& meshDesc, const Matrix4x4& mat = Matrix4x4::IDENTITY, const MaterialSourceDesc& material = MaterialSourceDesc());
+
+        void addShape(Shape shape = Shape::Sphere, const Matrix4x4& mat = Matrix4x4::IDENTITY, const MaterialSourceDesc& material = MaterialSourceDesc());
+
+
+    private:
+        static void getShapeData(Shape shape, RenderMeshData& meshData);
+        static void getSphereData(RenderMeshData& meshData);
+        static void getPlaneData(RenderMeshData& meshData);
+        void getTestData(RenderMeshData& meshData);
+        void getAxisData(RenderMeshData& meshData);
 
     private:
         GuidAllocator<MeshSourceDesc> m_mesh_asset_id_allocator;
