@@ -46,15 +46,6 @@ namespace Light
         stbi_set_flip_vertically_on_load(true);
     }
 
-    void RenderResourceBase::initScene(std::shared_ptr<RHI> rhi)
-    {
-        AxisAlignedBox aabb;
-        MeshSourceDesc meshDesc{ "../resources/models/sphere.obj" };
-        RenderMeshData meshData = loadMeshData(meshDesc, aabb);
-        auto mesh_asset_id = m_mesh_asset_id_allocator.allocGuid(meshDesc);
-        rhi->updateRHIMesh(meshData, mesh_asset_id);
-    }
-
     std::shared_ptr<Light::TextureData> RenderResourceBase::loadTextureHDR(std::string file, int desired_channels /*= 4*/)
     {
         std::shared_ptr<AssetManager> asset_manager = g_runtime_global_context.m_asset_manager;
@@ -141,20 +132,20 @@ namespace Light
 
     RenderMaterialData RenderResourceBase::loadMaterialData(const MaterialSourceDesc& source)
     {
-
-        if (SimpleMaterials.count(source.m_base_color_file) > 0) {
-            return SimpleMaterials.find(source.m_base_color_file)->second;
-        }
         RenderMaterialData ret;
-        ret.m_base_color_texture = loadTexture(source.m_base_color_file);
-        ret.m_metallic_roughness_texture = loadTexture(source.m_metallic_roughness_file);
-        ret.m_normal_texture = loadTexture(source.m_normal_file);
-        ret.m_occlusion_texture = loadTexture(source.m_occlusion_file);
-        ret.m_emissive_texture = loadTexture(source.m_emissive_file);
-
         ret.m_shader.m_vertex_shader_code = loadFile(source.m_vertex_shader_file);
         ret.m_shader.m_fragment_shader_code = loadFile(source.m_fragment_shader_file);
 
+        if (SimpleMaterials.count(source.m_base_color_file) > 0) {
+            ret.m_base_color_texture = SimpleMaterials.find(source.m_base_color_file)->second.m_base_color_texture;
+        }
+        else {
+            ret.m_base_color_texture = loadTexture(source.m_base_color_file);
+            ret.m_metallic_roughness_texture = loadTexture(source.m_metallic_roughness_file);
+            ret.m_normal_texture = loadTexture(source.m_normal_file);
+            ret.m_occlusion_texture = loadTexture(source.m_occlusion_file);
+            ret.m_emissive_texture = loadTexture(source.m_emissive_file);
+        }
         return ret;
     }
 

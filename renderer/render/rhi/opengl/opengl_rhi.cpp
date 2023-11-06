@@ -65,7 +65,8 @@ namespace Light
     {
         SteadyUniformBlock* steadyBlock = (SteadyUniformBlock*)(m_steady_uniform_buffer->m_data);
         auto view_matrix = camera->getViewMatrix();
-        auto proj_matrix = camera->getPersProjMatrix();
+        //auto proj_matrix = camera->getPersProjMatrix();
+        auto proj_matrix = camera->getOrthoPrgjMatrix();
         steadyBlock->view_matrix = view_matrix.toMatrix4x4_();
         steadyBlock->proj_matrix = proj_matrix.toMatrix4x4_();
         steadyBlock->proj_view_matrix = (proj_matrix * view_matrix).toMatrix4x4_();
@@ -214,7 +215,7 @@ namespace Light
 
     void OpenglRHI::upateTexture(const std::shared_ptr<TextureData> texture, OpenglTexture& glTexture)
     {
-        if (!texture->isValid()) {
+        if (texture && !texture->isValid()) {
             return;
         }
         glGenTextures(1, &glTexture.texture);

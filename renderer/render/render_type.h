@@ -375,6 +375,7 @@ namespace Light
 
     struct MaterialSourceDesc
     {
+        std::string m_type = "blinn_phong";
         std::string m_vertex_shader_file = "../resources/shaders/mesh.vs";
         std::string m_fragment_shader_file = "../resources/shaders/mesh.fs";
         std::string m_base_color_file = "../resources/textures/awesomeface.png";

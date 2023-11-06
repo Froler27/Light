@@ -110,6 +110,14 @@ namespace Light
         return proj_mat;
     }
 
+    Light::Matrix4x4 RenderCamera::getOrthoPrgjMatrix() const
+    {
+        float half_height = 10 * Math::tan(Radian(Degree(m_fovy)));
+        float half_width = half_height * m_aspect;
+
+        return Math::makeOrthographicProjectionMatrix(-half_width, half_width, -half_height, half_height, m_znear, m_zfar);
+    }
+
     void RenderCamera::setAspect(float aspect)
     {
         m_aspect = aspect;
