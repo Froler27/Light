@@ -30,10 +30,12 @@ namespace Light
         RenderMaterialData           loadMaterialData(const MaterialSourceDesc& source);
         AxisAlignedBox               getCachedBoudingBox(const MeshSourceDesc& source) const;
 
+        static std::string loadFile(const std::string& filename);
+
     private:
         StaticMeshData loadStaticMesh(const std::string& mesh_file, AxisAlignedBox& bounding_box);
 
-        std::string loadFile(const std::string& filename);;
+        
 
         std::unordered_map<MeshSourceDesc, AxisAlignedBox> m_bounding_box_cache_map;
 

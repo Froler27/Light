@@ -11,7 +11,8 @@ namespace Light
     enum class RenderCameraType : int
     {
         Editor,
-        Motor
+        Motor,
+        Shadow
     };
 
     class RenderCamera
@@ -44,6 +45,7 @@ namespace Light
 
         void setAspect(float aspect);
         void setFOVx(float fovx) { m_fovx = fovx; }
+        void setViewport(const Vector4i& viewport) { m_viewport = viewport; }
 
         Vector3    position() const { return m_position; }
         Quaternion rotation() const { return m_rotation; }
@@ -53,15 +55,18 @@ namespace Light
         Vector3   right() const { return (m_invRotation * X); }
         Vector2   getFOV() const { return {m_fovx, m_fovy}; }
         Matrix4x4 getViewMatrix();
+        Matrix4x4 getProjMatrix() const;
         Matrix4x4 getPersProjMatrix() const;
-        Matrix4x4 getOrthoPrgjMatrix() const;
+        Matrix4x4 getOrthoPrgjMatrix(float height_half = 11.f) const;
         Matrix4x4 getLookAtMatrix() const { return Math::makeLookAtMatrix(position(), position() + forward(), up()); }
         float     getFovYDeprecated() const { return m_fovy; }
+        Vector4i getViewport() const { return m_viewport; }
 
     protected:
         float m_aspect {0.f};
         float m_fovx {Degree(89.f).valueDegrees()};
         float m_fovy {0.f};
+        Vector4i m_viewport{0, 0, 10, 10};
 
         std::mutex m_view_matrix_mutex;
     };

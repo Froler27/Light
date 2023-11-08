@@ -5,6 +5,7 @@
 #include "core/base/macro.h"
 #include "window_system.h"
 #include "render/render_camera.h"
+#include "render/render_resource_base.h"
 
 namespace Light
 {
@@ -36,6 +37,9 @@ namespace Light
             m_transient_uniform_buffer_block->m_data, GL_DYNAMIC_DRAW);
 
 
+        initLight();
+
+
         glEnable(GL_DEPTH_TEST);
         //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         //glPolygonMode(GL_BACK, GL_POINT);
@@ -61,22 +65,61 @@ namespace Light
         glViewport(0, 0, width, height);
     }
 
+    void OpenglRHI::setViewport(int x, int y, int w, int h)
+    {
+        glViewport(x, y, w, h);
+    }
+
+    static const uint32_t SHADOW_WIDTH = 2048;
+    static const uint32_t SHADOW_HEIGHT = 2048;
+
     void OpenglRHI::bindCamera(std::shared_ptr<RenderCamera> camera)
     {
         SteadyUniformBlock* steadyBlock = (SteadyUniformBlock*)(m_steady_uniform_buffer->m_data);
+
+        
+        if (camera->m_current_camera_type == RenderCameraType::Shadow) {
+            *(Vector3*)(steadyBlock->light_pos_or_dir) = camera->forward();
+
+            auto light_proj_view_matrix = (camera->getOrthoPrgjMatrix()* camera->getViewMatrix()).toMatrix4x4_();
+            steadyBlock->light_proj_view_matrix = light_proj_view_matrix;
+
+            *(Matrix4x4_*)(m_shadow_data.shadow_uniform_buffer->m_data) = light_proj_view_matrix;
+            glBindBuffer(GL_UNIFORM_BUFFER, m_shadow_data.shadow_ubo);
+            glBufferData(GL_UNIFORM_BUFFER, m_shadow_data.shadow_uniform_buffer->m_size,
+                m_shadow_data.shadow_uniform_buffer->m_data, GL_STATIC_DRAW);
+
+            glUseProgram(m_shadow_data.shadow_shader);
+            glBindBufferBase(GL_UNIFORM_BUFFER, 0, m_shadow_data.shadow_ubo);
+
+            auto viewport = camera->getViewport();
+            glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+            glBindFramebuffer(GL_FRAMEBUFFER, m_shadow_data.shadow_fbo);
+            glClear(GL_DEPTH_BUFFER_BIT);
+            
+            return;
+        }
+        
         auto view_matrix = camera->getViewMatrix();
-        //auto proj_matrix = camera->getPersProjMatrix();
-        auto proj_matrix = camera->getOrthoPrgjMatrix();
+        //auto proj_matrix = camera->getOrthoPrgjMatrix();
+        auto proj_matrix = camera->getProjMatrix();
         steadyBlock->view_matrix = view_matrix.toMatrix4x4_();
         steadyBlock->proj_matrix = proj_matrix.toMatrix4x4_();
         steadyBlock->proj_view_matrix = (proj_matrix * view_matrix).toMatrix4x4_();
         *(Vector3*)(steadyBlock->camera_position) = camera->position();
+        
+        
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        auto viewport = camera->getViewport();
+        glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glBindBuffer(GL_UNIFORM_BUFFER, m_steady_uniform_buffer_gpu.ubo);
         glBufferData(GL_UNIFORM_BUFFER, m_steady_uniform_buffer->m_size,
             m_steady_uniform_buffer->m_data, GL_STATIC_DRAW);
 
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        
+        
     }
 
     void OpenglRHI::bindMaterial(size_t materialId)
@@ -86,10 +129,15 @@ namespace Light
 
 
             glUseProgram(it->second.shader);
+            glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, it->second.base_color_texture.texture);
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, m_shadow_data.shadow_texture);
+
             glBindBufferBase(GL_UNIFORM_BUFFER, 0, m_steady_uniform_buffer_gpu.ubo);
             glBindBufferBase(GL_UNIFORM_BUFFER, 1, m_transient_uniform_buffer_block_gpu.ubo);
             glUniform1i(1, 0); // 绑定纹理
+            glUniform1i(2, 1); // 绑定纹理
         }
     }
 
@@ -266,5 +314,32 @@ namespace Light
         glDeleteShader(fragment);
     }
 
+    void OpenglRHI::initLight()
+    {
+        glGenFramebuffers(1, &m_shadow_data.shadow_fbo);
+        glGenTextures(1, &m_shadow_data.shadow_texture);
+
+        glBindTexture(GL_TEXTURE_2D, m_shadow_data.shadow_texture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, m_shadow_data.shadow_fbo);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_shadow_data.shadow_texture, 0);
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        glGenBuffers(1, &m_shadow_data.shadow_ubo);
+        m_shadow_data.shadow_uniform_buffer = std::make_shared<BufferData>(sizeof(Matrix4x4_));
+
+        RenderShaderData shadow_shader_file{ 
+            RenderResourceBase::loadFile("../resources/shaders/mesh_directional_light_shadow.vs"), 
+            RenderResourceBase::loadFile("../resources/shaders/mesh_directional_light_shadow.fs") };
+        compileShader(shadow_shader_file, m_shadow_data.shadow_shader);
+    }
+    
 
 }

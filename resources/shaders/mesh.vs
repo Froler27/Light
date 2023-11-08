@@ -32,15 +32,16 @@ layout(std140, binding = 0, row_major) uniform SteadyBlock
     mat4 view_matrix;
     mat4 proj_matrix;
     mat4 proj_view_matrix;
+    mat4 light_proj_view_matrix;
 } steady_block;
 
 layout(location = 0) uniform mat4 model_matrix;
 
 void main()
 {
-    highp vec3 model_position;
-    highp vec3 model_normal;
-    highp vec3 model_tangent;
+    vec3 model_position;
+    vec3 model_normal;
+    vec3 model_tangent;
 
     model_position = in_position;
     model_normal   = in_normal;

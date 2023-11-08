@@ -87,6 +87,7 @@ namespace Light
         auto                        view_matrix = Matrix4x4::IDENTITY;
         switch (m_current_camera_type)
         {
+        case RenderCameraType::Shadow:
             case RenderCameraType::Editor:
                 view_matrix = Math::makeLookAtMatrix(position(), position() + forward(), up());
                 break;
@@ -97,6 +98,14 @@ namespace Light
                 break;
         }
         return view_matrix;
+    }
+
+    Light::Matrix4x4 RenderCamera::getProjMatrix() const
+    {
+        if (m_current_camera_type == RenderCameraType::Shadow) {
+            return getOrthoPrgjMatrix();
+        }
+        return getPersProjMatrix();
     }
 
     Matrix4x4 RenderCamera::getPersProjMatrix() const
@@ -110,12 +119,11 @@ namespace Light
         return proj_mat;
     }
 
-    Light::Matrix4x4 RenderCamera::getOrthoPrgjMatrix() const
+    Light::Matrix4x4 RenderCamera::getOrthoPrgjMatrix(float height_half) const
     {
-        float half_height = 10 * Math::tan(Radian(Degree(m_fovy)));
-        float half_width = half_height * m_aspect;
+        float width_half = height_half * m_aspect;
 
-        return Math::makeOrthographicProjectionMatrix(-half_width, half_width, -half_height, half_height, m_znear, m_zfar);
+        return Math::makeOrthographicProjectionMatrix(-width_half, width_half, -height_half, height_half, m_znear, m_zfar);
     }
 
     void RenderCamera::setAspect(float aspect)

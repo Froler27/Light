@@ -37,6 +37,7 @@ layout(std140, binding = 0, row_major) uniform SteadyBlock
     mat4 view_matrix;
     mat4 proj_matrix;
     mat4 proj_view_matrix;
+    mat4 light_proj_view_matrix;
 } steady_block;
 
 layout(std140, binding = 1, row_major) uniform TransientBlock
@@ -45,32 +46,56 @@ layout(std140, binding = 1, row_major) uniform TransientBlock
 } transient_block;
 
 layout(location = 1) uniform sampler2D texture_diffuse;
+layout(location = 2) uniform sampler2D directional_light_shadow;
 
-const Material material_c = Material(vec4(1.f, 0.5f, 0.31f, 1.f), vec4(vec3(1.), 32));
+vec2 ndcxy_to_uv(highp vec2 ndcxy) { return ndcxy * vec2(0.5, 0.5) + vec2(0.5, 0.5); }
+
+vec2 uv_to_ndcxy(highp vec2 uv) { return uv * vec2(2.0, 2.0) + vec2(-1.0, -1.0); }
+
+bool no_directional_light_shadow() {
+    vec4 position_clip = steady_block.light_proj_view_matrix * vec4(in_world_position, 1.0);
+    vec3 position_ndc  = position_clip.xyz / position_clip.w;
+    vec2 uv = ndcxy_to_uv(position_ndc.xy);
+    float closest_depth = texture(directional_light_shadow, uv).r  + 0.00075;
+    float current_depth = (position_ndc.z+1.)/2.;
+    //closest_depth = 0.05;
+    return closest_depth > current_depth;
+}
 
 void main()
 {
-    vec3 n = normalize(in_normal);
+    vec3 N = normalize(in_normal);
 
-    vec3 l, E;
+    vec3 L;
+    vec3 E = vec3(0.);
     if (steady_block.light.pos_or_dir.w == 0.) { // 平行光
-        l = -normalize(steady_block.light.pos_or_dir.xyz);
-        E = max(0, dot(n, l))*steady_block.light.color.rgb;  // irradiance
+        L = -normalize(steady_block.light.pos_or_dir.xyz);
+        //E = max(0, dot(N, L))*steady_block.light.color.rgb;   // irradiance
+        float NoL = dot(N, L);
+        if (NoL > 0. && no_directional_light_shadow()) 
+        {
+            E = NoL*steady_block.light.color.rgb;               // irradiance
+        }
+        
     }else{  // 点光源
         float r = length(steady_block.light.pos_or_dir.xyz - in_world_position);
-        l = (steady_block.light.pos_or_dir.xyz - in_world_position)/r;
-        E = max(0, dot(n, l)) / (r*r) * steady_block.light.color.rgb;// irradiance
+        L = (steady_block.light.pos_or_dir.xyz - in_world_position)/r;
+        E = max(0, dot(N, L)) / (r*r) * steady_block.light.color.rgb;   // irradiance
     }
 
-    vec3 diffuse = texture(texture_diffuse, in_texcoord).xyz/PI;
-    //vec3 diffuse = material.color.xyz/PI;// 兰伯特反射的BRDF
+    vec3 R = texture(texture_diffuse, in_texcoord).xyz;
+    vec3 diffuse = R/PI;    // 兰伯特反射的BRDF
 
-    vec3 v = normalize(steady_block.camera_position - in_world_position);
-    vec3 h = normalize(l+v);
-    vec3 specular = transient_block.material.ks_p.xyz * pow(max(0, dot(n, h)), transient_block.material.ks_p.w);// 高光反射的BRDF
+    vec3 V = normalize(steady_block.camera_position - in_world_position);
+    vec3 H = normalize(L+V);
+    vec3 specular = transient_block.material.ks_p.xyz * pow(max(0, dot(N, H)), transient_block.material.ks_p.w);// 高光反射的BRDF
     vec3 brdf = diffuse + specular;
 
-    vec3 L = brdf * E; // radiance = brdf * irradiance
+    vec3 Lr = brdf * E;     // radiance = brdf * irradiance
 
-    out_scene_color = vec4(L, 1.0);
+    vec3 Ia = vec3(0.1);  // 环境光强度
+    vec3 ka = R;            // 环境光反射系数
+    vec3 La = ka * Ia;      // 环境光radiance
+
+    out_scene_color = vec4(Lr + La, 1.0);
 }

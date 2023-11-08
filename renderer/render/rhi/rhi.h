@@ -28,6 +28,8 @@ namespace Light
         // destroy
         virtual void clear() = 0;
 
+        virtual void setViewport(int x, int y, int w, int h) = 0;
+
         virtual void bindCamera(std::shared_ptr<RenderCamera> camera) = 0;
 
         virtual void bindMesh(size_t meshId) = 0;

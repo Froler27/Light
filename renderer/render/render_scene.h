@@ -12,6 +12,7 @@ namespace Light
 {
     class RenderResourceBase;
     class RHI;
+    class RenderCamera;
 
     class RenderEntity {
     public:
@@ -29,11 +30,35 @@ namespace Light
     };
     extern const std::vector<std::string> ShapeString;
 
+
+    enum class LightType : uint32_t
+    {
+        Direction,
+        Point,
+    };
+    class PointLikeLight
+    {
+    public:
+        explicit PointLikeLight(LightType type = LightType::Direction);
+        explicit PointLikeLight(std::shared_ptr<RenderCamera> camera, LightType type = LightType::Direction) :
+            m_shadow_camera{ camera }, m_type{ type } {}
+
+        void setDirectionl(const Vector3& forward);
+
+        LightType m_type;
+        std::shared_ptr<RenderCamera> m_shadow_camera;
+        Vector4 m_pos_or_dir{ 0.f, 1.f, -1.f, 0.f };
+        Vector4 m_color_and_intensity{ Vector3(1.f), Math_PI };
+        
+    };
+
     class RenderScene
     {
         friend class RenderSystem;
     public:
         explicit RenderScene(std::shared_ptr<RHI> rhi);
+
+        void addLight(std::shared_ptr<PointLikeLight> light);
 
         void addMesh(const MeshSourceDesc& meshDesc, const Matrix4x4& mat = Matrix4x4::IDENTITY, const MaterialSourceDesc& material = MaterialSourceDesc());
 
@@ -52,6 +77,7 @@ namespace Light
         GuidAllocator<MaterialSourceDesc> m_material_asset_id_allocator;
         std::shared_ptr<RenderResourceBase> m_render_resource;
         std::shared_ptr<RHI> m_rhi;
+        std::vector<std::shared_ptr<PointLikeLight>> m_lights;
         std::unordered_multimap<size_t, size_t> m_material_to_meshs;
         std::unordered_multimap<size_t, RenderEntity> m_render_entities;
         std::unordered_map<size_t, AxisAlignedBox> m_aabbs;

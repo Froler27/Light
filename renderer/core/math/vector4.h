@@ -4,8 +4,11 @@
 #include "core/math/math.h"
 #include "core/math/vector3.h"
 
+#include <array>
+
 namespace Light
 {
+    using Vector4i = std::array<int, 4>;
     class Vector4
     {
     public:

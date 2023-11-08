@@ -41,6 +41,8 @@ namespace Light
         m_render_camera->m_zfar  = 1000;
         m_render_camera->m_znear = 0.1f;
         m_render_camera->setAspect(init_info.window_system->getAspect());
+        auto windowSize = init_info.window_system->getWindowSize();
+        m_render_camera->setViewport({ 0, 0, windowSize[0], windowSize[1] });
         init_info.window_system->registerOnWindowSizeFunc(windowSizeChanged);
 
 
@@ -84,6 +86,10 @@ namespace Light
     {
 //          MeshSourceDesc meshDesc{ "../resources/models/sphere.obj" };
 //          m_render_scene->addMesh(meshDesc);
+
+        std::shared_ptr<PointLikeLight> light = std::make_shared<PointLikeLight>();
+        m_render_scene->addLight(light);
+
         MaterialSourceDesc materialDesc;
         materialDesc.m_fragment_shader_file = "../resources/shaders/blinn_phong.fs";
         //materialDesc.m_base_color_file = "";
@@ -140,7 +146,41 @@ namespace Light
                 m_render_camera->move(move_direction * 2.0f * delta_time);
             }
         }
+        
+        auto shadowCamera = m_render_scene->m_lights[0]->m_shadow_camera;
+        if (m_render_scene->m_lights.size() > 0) {
+            m_rhi->bindCamera(shadowCamera);
+
+            for (auto itr_meshs = m_render_scene->m_material_to_meshs.begin();
+                itr_meshs != m_render_scene->m_material_to_meshs.end();)
+            {
+                auto materialId = itr_meshs->first;
+                //m_rhi->bindMaterial(materialId);
+
+                auto range_meshs = m_render_scene->m_material_to_meshs.equal_range(materialId);
+                for (auto itr_mesh = range_meshs.first; itr_mesh != range_meshs.second; ++itr_mesh) {
+                    auto meshId = itr_mesh->second;
+                    m_rhi->bindMesh(meshId);
+                    auto range_entities = m_render_scene->m_render_entities.equal_range(meshId);
+                    uint32_t instance_num = m_render_scene->m_render_entities.count(meshId);
+                    if (instance_num == 1) {
+                        m_rhi->drawMesh(meshId, range_entities.first->second.m_model_matrix);
+                    }
+                    else {
+                        // TODO: ÊµÀý»¯»æÖÆ
+                        for (auto itr_entity = range_entities.first; itr_entity != range_entities.second; ++itr_entity) {
+                            const auto& entity = itr_entity->second;
+                            m_rhi->drawMesh(meshId, entity.m_model_matrix);
+                        }
+                    }
+                }
+                itr_meshs = range_meshs.second;
+            }
+
+        }
+        //shadowCamera->m_current_camera_type = RenderCameraType::Editor;
         m_rhi->bindCamera(m_render_camera);
+        //m_rhi->bindCamera(shadowCamera);
 
         for (auto itr_meshs = m_render_scene->m_material_to_meshs.begin();
             itr_meshs != m_render_scene->m_material_to_meshs.end();)

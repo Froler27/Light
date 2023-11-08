@@ -1,6 +1,7 @@
 #include "render/render_scene.h"
 #include "render/render_resource_base.h"
 #include "render/rhi/rhi.h"
+#include "render/render_camera.h"
 
 namespace Light
 {
@@ -10,9 +11,46 @@ namespace Light
         "Plane",
     };
 
-    RenderScene::RenderScene(std::shared_ptr<RHI> rhi) : m_rhi{rhi}
+    PointLikeLight::PointLikeLight(LightType type): m_type{type}
+    {
+        m_shadow_camera = std::make_shared<RenderCamera>();
+        switch (type)
+        {
+        case LightType::Direction:
+            m_shadow_camera->lookAt(Vector3(0.f),
+                { 0.f, 1.f, -1.f },
+                Vector3::UNIT_Z);
+            m_shadow_camera->setViewport({ 0,0, 2048, 2048 });
+            m_shadow_camera->m_znear = -50.1;
+            m_shadow_camera->m_zfar = m_shadow_camera->m_znear + 1000;
+            m_shadow_camera->m_current_camera_type = RenderCameraType::Shadow;
+            m_shadow_camera->setAspect(1.);
+            break;
+        case LightType::Point:
+            break;
+        default:
+            break;
+        }
+        
+    }
+
+    void PointLikeLight::setDirectionl(const Vector3& forward)
+    {
+        m_type = LightType::Direction;
+        m_pos_or_dir = Vector4(forward, 0);
+        m_shadow_camera->lookAt(Vector3(0.f), forward, Vector3::UNIT_Y);
+        m_shadow_camera->setAspect(1.);
+
+    }
+
+    RenderScene::RenderScene(std::shared_ptr<RHI> rhi) : m_rhi{ rhi }
     {
         m_render_resource = std::make_shared<RenderResourceBase>();
+    }
+
+    void RenderScene::addLight(std::shared_ptr<PointLikeLight> light)
+    {
+        m_lights.push_back(light);
     }
 
     void RenderScene::addMesh(const MeshSourceDesc& meshDesc, const Matrix4x4& matrix, const MaterialSourceDesc& material)
@@ -325,5 +363,7 @@ namespace Light
         meshData.m_static_mesh_data.m_vertex_buffer->copyData((void*)vertexData.data());
         meshData.m_static_mesh_data.m_index_buffer->copyData((void*)indexData.data());
     }
+
+    
 
 }
