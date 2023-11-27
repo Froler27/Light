@@ -13,8 +13,51 @@
 
 #include "render/rhi/opengl/opengl_rhi.h"
 
+#include <imgui.h>
+#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_opengl3.h>
+
 namespace Light
 {
+
+    class UIPass 
+    {
+    public:
+        ~UIPass()
+        {
+            ImGui_ImplOpenGL3_Shutdown();
+            ImGui_ImplGlfw_Shutdown();
+            ImGui::DestroyContext();
+        }
+
+        void initialize() {
+            IMGUI_CHECKVERSION();
+            ImGui::CreateContext();
+            ImGuiIO& io = ImGui::GetIO();
+            io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+            io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+            io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // IF using Docking Branch
+
+            // Setup Platform/Renderer backends
+            ImGui_ImplGlfw_InitForOpenGL(g_runtime_global_context.m_window_system->getWindow(), true);          // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
+            ImGui_ImplOpenGL3_Init();
+        }
+
+        void draw() {
+            ImGui_ImplOpenGL3_NewFrame();
+            ImGui_ImplGlfw_NewFrame();
+            ImGui::NewFrame();
+            ImGui::ShowDemoWindow(); // Show demo window! :)
+
+            ImGui::Render();
+            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        }
+
+        //std::shared_ptr<RHI> m_rhi;
+    };
+
+    static std::shared_ptr<UIPass> ui_pass = std::make_shared<UIPass>();
+
     RenderSystem::~RenderSystem()
     {
         clear();
@@ -22,6 +65,7 @@ namespace Light
 
     void RenderSystem::initialize(RenderSystemInitInfo init_info)
     {
+        ui_pass->initialize();
         std::shared_ptr<AssetManager> asset_manager = g_runtime_global_context.m_asset_manager;
         ASSERT(asset_manager);
 
@@ -209,6 +253,8 @@ namespace Light
         }
 
         //drawAxis();
+
+        ui_pass->draw();
 
     }
 

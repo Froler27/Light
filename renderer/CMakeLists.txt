@@ -1,6 +1,11 @@
 set(TARGET_NAME renderer)
 set(RENDERER_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 
+set(JSON_INCLUDE ${THIRD_PARTY_DIR}/json11)
+
+add_library(json11 ${JSON_INCLUDE}/json11.cpp)
+set_target_properties(json11 PROPERTIES FOLDER "ThirdParty/json11")
+
 # ---- Add source files ----
 
 # Note: globbing sources is considered bad practice as CMake's generators may not detect new files
@@ -24,7 +29,9 @@ target_compile_options(${TARGET_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:
 target_link_libraries(${TARGET_NAME} PUBLIC spdlog::spdlog)
 target_link_libraries(${TARGET_NAME} PUBLIC glad)
 target_link_libraries(${TARGET_NAME} PUBLIC glfw)
+target_link_libraries(${TARGET_NAME} PUBLIC imgui)
 target_link_libraries(${TARGET_NAME} PUBLIC tinyobjloader stb)
+target_link_libraries(${TARGET_NAME} PRIVATE $<BUILD_INTERFACE:json11>)
 
 target_include_directories(
   ${TARGET_NAME} 
